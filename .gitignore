@@ -1,4 +1,12 @@
-node_modules/
+# Dependencies
+/node_modules
+
+# Environment variables
 .env
+
+# Logs
+logs
 *.log
-.DS_Store
+
+# Production
+/build
