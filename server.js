@@ -154,6 +154,38 @@ app.post('/api/query', async (req, res) => {
   }
 });
 
+// NOVO ENDPOINT: para a Stored Procedure de Análise de Revendedoras
+app.post('/api/sp-rev-comissao', async (req, res) => {
+    const { whereClause } = req.body;
+
+    if (!whereClause) {
+        return res.status(400).json({ success: false, error: 'Parâmetro "whereClause" é obrigatório.' });
+    }
+
+    try {
+        const p = await getPool();
+        if (!p) {
+            console.error('[API Render] Sem conexão com o banco para sp-rev-comissao');
+            return res.status(503).json({ success: false, error: 'Serviço indisponível: Sem conexão com o banco de dados.' });
+        }
+
+        const request = p.request();
+        // O tipo e o tamanho do parâmetro devem corresponder ao que a SP espera
+        request.input('Where', sql.NVarChar(4000), whereClause); // Ajuste o tamanho (4000) se necessário
+
+        console.log(`[API Render] Executando SP 'sp_returnConsultaRevComissao' com WHERE: ${whereClause}`);
+        const result = await request.execute('sp_returnConsultaRevComissao');
+
+        res.json({ success: true, data: result.recordset });
+
+    } catch (err) {
+        console.error('[API Render] Erro ao executar SP sp_returnConsultaRevComissao:', err.message);
+        // Retorna um erro 500 se algo der errado na execução da SP ou conexão
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+
 // Status do DB: hora do SQL + contagens/valores do dia (para acompanhar atualização)
 app.get('/api/db-status', async (req, res) => {
   try {
@@ -187,3 +219,5 @@ process.on('SIGINT', async () => {
   try { if (pool) await pool.close(); } catch {}
   process.exit(0);
 });
+
+
