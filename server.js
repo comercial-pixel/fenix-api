@@ -185,6 +185,43 @@ app.post('/api/sp-rev-comissao', async (req, res) => {
     }
 });
 
+// NOVO ENDPOINT: para a Stored Procedure sp_CobrancaAcerto
+app.post('/api/sp-cobranca-acerto', async (req, res) => {
+    // Parâmetros que sua Base44 enviará
+    const { emp_cod } = req.body; // Apenas emp_cod é enviado do frontend Base44
+
+    // Parâmetros fixos conforme sua definição
+    const ATRAZADO = 0;
+    const RevCod = 0;
+    const TIPO = 1;
+    const EndCompleto = 0;
+
+    try {
+        const p = await getPool();
+        if (!p) {
+            console.error('[API Render] Sem conexão com o banco para sp-cobranca-acerto');
+            return res.status(503).json({ success: false, error: 'Serviço indisponível: Sem conexão com o banco de dados.' });
+        }
+
+        const request = p.request();
+        // Declara e adiciona os parâmetros à requisição com seus respectivos tipos SQL
+        request.input('EMP_COD', sql.Int, emp_cod);
+        request.input('ATRASADO', sql.Bit, ATRAZADO);
+        request.input('RevCod', sql.Int, RevCod);
+        request.input('TIPO', sql.Int, TIPO);
+        request.input('EndCompleto', sql.Bit, EndCompleto);
+
+        console.log(`[API Render] Executando SP 'sp_CobrancaAcerto' para EMP_COD: ${emp_cod}`);
+        const result = await request.execute('sp_CobrancaAcerto');
+
+        res.json({ success: true, data: result.recordset });
+
+    } catch (err) {
+        console.error('[API Render] Erro ao executar SP sp_CobrancaAcerto:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 
 // Status do DB: hora do SQL + contagens/valores do dia (para acompanhar atualização)
 app.get('/api/db-status', async (req, res) => {
@@ -219,5 +256,3 @@ process.on('SIGINT', async () => {
   try { if (pool) await pool.close(); } catch {}
   process.exit(0);
 });
-
-
