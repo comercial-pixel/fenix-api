@@ -59,72 +59,12 @@ async function getPool() {
 
 // ---- QUERIES (as suas, sem alterações) ----
 const queries = {
-  lancamentos_diarios: `
-    SELECT cad_emp.EMP_NMR
-    , 'Lançamento' AS Tipo
-    , COUNT(cad_ipe.IPE_COD) AS Qtde
-    , COUNT(DISTINCT cad_ipe.PED_COD) AS [QTDE PEDIDOS]
-    , SUM(cad_ipe.IPE_VTL) AS Valor 
-    , SUM(cad_ipe.IPE_VLC) AS Custo 
-    FROM cad_ipe 
-    JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod 
-    JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod 
-    WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC')
-      AND CONVERT(varchar,cad_ipe.IPE_DTL,112) = CONVERT(varchar,GETDATE(),112)
-      AND cad_ped.PED_TIP = 11
-    GROUP BY cad_emp.EMP_NMR
-    ORDER BY Valor DESC
-  `,
-  devolucoes_diarias: `
-    SELECT cad_emp.EMP_NMR
-    , 'Devolução' AS Tipo
-    , COUNT(cad_ipe.IPE_COD) AS Qtde
-    , COUNT(DISTINCT cad_ipe.PED_COD) AS [QTDE PEDIDOS]
-    , SUM(cad_ipe.IPE_VTL) AS Valor 
-    , SUM(cad_ipe.IPE_VLC) AS Custo 
-    FROM cad_ipe 
-    JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod 
-    JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod 
-    WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC')
-      AND CONVERT(varchar,cad_ipe.IPE_DDV,112) = CONVERT(varchar,GETDATE(),112)
-      AND cad_ped.PED_TIP = 11
-    GROUP BY cad_emp.EMP_NMR
-    ORDER BY Valor DESC
-  `,
-  lancamentos_acumulados: `
-    SELECT cad_emp.EMP_NMR
-    , 'Lançamento' AS Tipo
-    , COUNT(cad_ipe.IPE_COD) AS Qtde
-    , COUNT(DISTINCT cad_ipe.PED_COD) AS [QTDE PEDIDOS]
-    , SUM(cad_ipe.IPE_VTL) AS Valor 
-    , SUM(cad_ipe.IPE_VLC) AS Custo 
-    FROM cad_ipe 
-    JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod 
-    JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod 
-    WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC')
-      AND CONVERT(varchar,cad_ipe.IPE_DTL,112) >= CONVERT(varchar,DATEADD(DAY, 1, EOMONTH(GETDATE(), -1)),112)
-      AND CONVERT(varchar,cad_ipe.IPE_DTL,112) <= CONVERT(varchar,EOMONTH(GETDATE()),112)
-      AND cad_ped.PED_TIP = 11
-    GROUP BY cad_emp.EMP_NMR
-    ORDER BY Valor DESC
-  `,
-  devolucoes_acumuladas: `
-    SELECT cad_emp.EMP_NMR
-    , 'Devolução' AS Tipo
-    , COUNT(cad_ipe.PED_COD) AS Qtde
-    , COUNT(DISTINCT cad_ipe.PED_COD) AS [QTDE PEDIDOS]
-    , SUM(cad_ipe.IPE_VTL) AS Valor 
-    , SUM(cad_ipe.IPE_VLC) AS Custo 
-    FROM cad_ipe 
-    JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod 
-    JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod 
-    WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC')
-      AND CONVERT(varchar,cad_ipe.IPE_DDV,112) >= CONVERT(varchar,DATEADD(DAY, 1, EOMONTH(GETDATE(), -1)),112)
-      AND CONVERT(varchar,cad_ipe.IPE_DDV,112) <= CONVERT(varchar,EOMONTH(GETDATE()),112)
-      AND cad_ped.PED_TIP = 11
-    GROUP BY cad_emp.EMP_NMR
-    ORDER BY Valor DESC
-  `
+    lancamentos_diarios: `SELECT cad_emp.EMP_NMR, 'Lançamento' AS Tipo, COUNT(DISTINCT cad_ped.REV_COD) as [QTDE REV], COUNT(cad_ipe.IPE_COD) AS Qtde, COUNT(DISTINCT cad_ipe.PED_COD) as [QTDE PEDIDOS], SUM(cad_ipe.IPE_VTL) AS Valor, SUM(cad_ipe.IPE_VLC) AS Custo FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and CONVERT(varchar,cad_ipe.IPE_DTL,112) = CONVERT(varchar,GETDATE(),112) and cad_ped.PED_TIP = 11 GROUP BY cad_emp.EMP_NMR ORDER BY Valor DESC`,
+    devolucoes_diarias: `SELECT cad_emp.EMP_NMR, 'Devolução' AS Tipo, COUNT(DISTINCT cad_ped.REV_COD) as [QTDE REV], COUNT(cad_ipe.IPE_COD) AS Qtde, COUNT(DISTINCT cad_ipe.PED_COD) as [QTDE PEDIDOS], SUM(cad_ipe.IPE_VTL) AS Valor, SUM(cad_ipe.IPE_VLC) AS Custo FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and CONVERT(varchar,cad_ipe.IPE_DDV,112) = CONVERT(varchar,GETDATE(),112) and cad_ped.PED_TIP = 11 GROUP BY cad_emp.EMP_NMR ORDER BY Valor DESC`,
+    lancamentos_acumulados: `SELECT cad_emp.EMP_NMR, 'Lançamento' AS Tipo, COUNT(DISTINCT cad_ped.REV_COD) as [QTDE REV], COUNT(cad_ipe.IPE_COD) AS Qtde, COUNT(DISTINCT cad_ipe.PED_COD) as [QTDE PEDIDOS], SUM(cad_ipe.IPE_VTL) AS Valor, SUM(cad_ipe.IPE_VLC) AS Custo FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and CONVERT(varchar,cad_ipe.IPE_DTL,112) >= CONVERT(varchar,DATEADD(DAY, 1, EOMONTH(GETDATE(), -1)),112) AND CONVERT(varchar,cad_ipe.IPE_DTL,112) <= CONVERT(varchar,GETDATE(),112) and cad_ped.PED_TIP = 11 GROUP BY cad_emp.EMP_NMR ORDER BY Valor DESC`,
+    devolucoes_acumuladas: `SELECT cad_emp.EMP_NMR, 'Devolução' AS Tipo, COUNT(DISTINCT cad_ped.REV_COD) as [QTDE REV], COUNT(cad_ipe.IPE_COD) AS Qtde, COUNT(DISTINCT cad_ipe.PED_COD) as [QTDE PEDIDOS], SUM(cad_ipe.IPE_VTL) AS Valor, SUM(cad_ipe.IPE_VLC) AS Custo FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and CONVERT(varchar,cad_ipe.IPE_DDV,112) >= CONVERT(varchar,DATEADD(DAY, 1, EOMONTH(GETDATE(), -1)),112) AND CONVERT(varchar,cad_ipe.IPE_DDV,112) <= CONVERT(varchar,GETDATE(),112) and cad_ped.PED_TIP = 11 GROUP BY cad_emp.EMP_NMR ORDER BY Valor DESC`,
+    lancamentos_historico: `SELECT CONVERT(varchar,cad_ipe.IPE_DTL,112) as data_ref, cad_emp.EMP_NMR, SUM(cad_ipe.IPE_VTL) as valor FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and cad_ipe.IPE_DTL >= DATEADD(day, -30, GETDATE()) and cad_ipe.IPE_DTL <= GETDATE() and cad_ped.PED_TIP = 11 GROUP BY CONVERT(varchar,cad_ipe.IPE_DTL,112), cad_emp.EMP_NMR`,
+    devolucoes_historico: `SELECT CONVERT(varchar,cad_ipe.IPE_DDV,112) as data_ref, cad_emp.EMP_NMR, SUM(cad_ipe.IPE_VTL) as valor FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and cad_ipe.IPE_DDV >= DATEADD(day, -30, GETDATE()) and cad_ipe.IPE_DDV <= GETDATE() and cad_ped.PED_TIP = 11 GROUP BY CONVERT(varchar,cad_ipe.IPE_DDV,112), cad_emp.EMP_NMR`
 };
 
 // ---- ROTAS ----
