@@ -174,6 +174,54 @@ app.post('/api/sp-cobranca-acerto', async (req, res) => {
   }
 });
 
+// NOVO ENDPOINT: para a Stored Procedure sp_returnFcsAnaliseParticipacoAcerto
+app.post('/api/sp-analise-participacao-acerto', async (req, res) => {
+  try {
+    const { emp_cod, inicio, fim } = req.body;
+
+    // Validação básica dos parâmetros
+    if (!emp_cod || !inicio || !fim) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Parâmetros emp_cod, inicio e fim são obrigatórios.' 
+      });
+    }
+
+    const pool = await getPool(); // Certifique-se de que getPool() está acessível e funcional
+    if (!pool) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Não foi possível conectar ao banco de dados.' 
+      });
+    }
+
+    console.log('📊 [sp-analise-participacao-acerto] Executando SP com parâmetros:', { emp_cod, inicio, fim });
+
+    const request = pool.request();
+    
+    // IMPORTANTE: Definir os tipos corretos dos parâmetros para a Stored Procedure
+    request.input('EMP_COD', sql.Int, parseInt(emp_cod));
+    request.input('INICIO', sql.VarChar(10), inicio); // Formato YYYYMMDD
+    request.input('FIM', sql.VarChar(10), fim);     // Formato YYYYMMDD
+
+    const result = await request.execute('sp_returnFcsAnaliseParticipacoAcerto');
+    
+    console.log(`✅ [sp-analise-participacao-acerto] SP executada com sucesso. Registros: ${result.recordset.length}`);
+
+    res.json({ 
+      success: true, 
+      data: result.recordset 
+    });
+
+  } catch (error) {
+    console.error('❌ [sp-analise-participacao-acerto] Erro na SP:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
+});
+
 // Status do DB: hora do SQL + contagens/valores do dia (para acompanhar atualização)
 app.get('/api/db-status', async (req, res) => {
   try {
