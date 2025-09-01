@@ -222,6 +222,52 @@ app.post('/api/sp-analise-participacao-acerto', async (req, res) => {
   }
 });
 
+// Endpoint para Análise de Participação de Produtos
+app.post('/api/sp-AnaliseParticipacaoDeProdutos', async (req, res) => {
+  try {
+    const { emp_cod, inicio, fim } = req.body;
+    const TCT_COD = 1; // Valor fixo conforme especificado
+    
+    // Validar parâmetros obrigatórios
+    if (!emp_cod || !inicio || !fim) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Parâmetros emp_cod, inicio e fim são obrigatórios' 
+      });
+    }
+
+    console.log(`[sp_AnaliseParticipacaoDeProdutos] Executando para emp_cod: ${emp_cod}, período: ${inicio} - ${fim}`);
+
+    const pool = await poolPromise;
+    const request = pool.request();
+    
+    // Configurar parâmetros da stored procedure
+    request.input('EMP_COD', sql.Int, emp_cod);
+    request.input('inicio', sql.VarChar(10), inicio);
+    request.input('Fim', sql.VarChar(10), fim);
+    request.input('TCT_COD', sql.Int, TCT_COD);
+    
+    // Executar a stored procedure
+    const result = await request.execute('sp_AnaliseParticipacaoDeProdutos');
+    
+    console.log(`[sp_AnaliseParticipacaoDeProdutos] Sucesso. Registros retornados: ${result.recordset.length}`);
+    
+    res.json({
+      success: true,
+      data: result.recordset
+    });
+    
+  } catch (error) {
+    console.error('Erro na SP sp_AnaliseParticipacaoDeProdutos:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+//
+//
 // Status do DB: hora do SQL + contagens/valores do dia (para acompanhar atualização)
 app.get('/api/db-status', async (req, res) => {
   try {
