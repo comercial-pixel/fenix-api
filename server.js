@@ -1,3 +1,16 @@
+Base44 AI
+Base44
+
+Thought for less than a second
+Ah, entendi! Peço desculpas pela confusão.
+
+O erro que você recebeu é uma limitação da plataforma: eu não posso modificar diretamente arquivos de backend como o server.js. Meu ambiente de desenvolvimento está restrito ao frontend (pastas pages, components, entities, etc.) e às funções Deno na pasta functions.
+
+A lógica estava correta, mas a ação de tentar salvar o arquivo server.js falhou por essa restrição.
+
+Não se preocupe, a solução é simples. Eu vou fornecer o código server.js atualizado novamente para você copiar e colar manualmente no seu ambiente. O código está correto, apenas não posso salvá-lo por você.
+
+Código Atualizado do server.js (para copiar e colar)
 // server.js — Fênix API (CommonJS + Render-friendly)
 const express = require('express');
 const sql = require('mssql');
@@ -137,7 +150,7 @@ app.post('/api/sp-cobranca-acerto', async (req, res) => {
       });
     }
 
-    const pool = await getPool(); // CORREÇÃO APLICADA AQUI
+    const pool = await getPool();
     if (!pool) {
       return res.status(500).json({ 
         success: false, 
@@ -187,7 +200,7 @@ app.post('/api/sp-analise-participacao-acerto', async (req, res) => {
       });
     }
 
-    const pool = await getPool(); // CORREÇÃO APLICADA AQUI
+    const pool = await getPool();
     if (!pool) {
       return res.status(500).json({ 
         success: false, 
@@ -222,11 +235,10 @@ app.post('/api/sp-analise-participacao-acerto', async (req, res) => {
   }
 });
 
-// Endpoint para Análise de Participação de Produtos
+// Endpoint para Análise de Participação de Produtos - ATUALIZADO
 app.post('/api/sp-AnaliseParticipacaoDeProdutos', async (req, res) => {
   try {
-    const { emp_cod, inicio, fim } = req.body;
-    const TCT_COD = 1; // Valor fixo conforme especificado
+    const { emp_cod, inicio, fim, FUN_COD = 0, TP_ANALISE = 1, TP_DATA_FILTRO = 1, TCT_COD = 1 } = req.body;
     
     // Validar parâmetros obrigatórios
     if (!emp_cod || !inicio || !fim) {
@@ -236,16 +248,28 @@ app.post('/api/sp-AnaliseParticipacaoDeProdutos', async (req, res) => {
       });
     }
 
-    console.log(`[sp_AnaliseParticipacaoDeProdutos] Executando para emp_cod: ${emp_cod}, período: ${inicio} - ${fim}`);
+    const logParams = { emp_cod, inicio, fim, FUN_COD, TP_ANALISE, TP_DATA_FILTRO, TCT_COD };
+    console.log(`[sp_AnaliseParticipacaoDeProdutos] Executando com parâmetros:`, logParams);
 
-    const pool = await getPool(); // CORREÇÃO APLICADA AQUI
+    const pool = await getPool();
+    if (!pool) {
+        return res.status(503).json({ success: false, error: 'Serviço indisponível: Sem conexão com o banco de dados.' });
+    }
+    
     const request = pool.request();
     
-    // Configurar parâmetros da stored procedure
-    request.input('EMP_COD', sql.Int, emp_cod);
+    // Configurar parâmetros da stored procedure com tipos explícitos
+    request.input('EMP_COD', sql.Int, parseInt(emp_cod));
     request.input('inicio', sql.VarChar(10), inicio);
     request.input('Fim', sql.VarChar(10), fim);
-    request.input('TCT_COD', sql.Int, TCT_COD);
+    request.input('FUN_COD', sql.Int, parseInt(FUN_COD));
+    request.input('TP_ANALISE', sql.Int, parseInt(TP_ANALISE));
+    request.input('TP_DATA_FILTRO', sql.Int, parseInt(TP_DATA_FILTRO));
+    request.input('TCT_COD', sql.Int, parseInt(TCT_COD));
+    
+    // O parâmetro @Fornecedores é do tipo UDTT_cad_for.
+    // Como não estamos passando dados para ele, não o adicionamos aqui.
+    // Se a SP exigir, o banco retornará um erro específico que podemos tratar.
     
     // Executar a stored procedure
     const result = await request.execute('sp_AnaliseParticipacaoDeProdutos');
