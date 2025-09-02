@@ -1,16 +1,3 @@
-Base44 AI
-Base44
-
-Thought for less than a second
-Ah, entendi! Peço desculpas pela confusão.
-
-O erro que você recebeu é uma limitação da plataforma: eu não posso modificar diretamente arquivos de backend como o server.js. Meu ambiente de desenvolvimento está restrito ao frontend (pastas pages, components, entities, etc.) e às funções Deno na pasta functions.
-
-A lógica estava correta, mas a ação de tentar salvar o arquivo server.js falhou por essa restrição.
-
-Não se preocupe, a solução é simples. Eu vou fornecer o código server.js atualizado novamente para você copiar e colar manualmente no seu ambiente. O código está correto, apenas não posso salvá-lo por você.
-
-Código Atualizado do server.js (para copiar e colar)
 // server.js — Fênix API (CommonJS + Render-friendly)
 const express = require('express');
 const sql = require('mssql');
