@@ -287,6 +287,7 @@ app.post('/api/sp-analise-participacao-acerto', async (req, res) => {
     request.input('EMP_COD', sql.Int, parseInt(emp_cod));
     request.input('INICIO', sql.VarChar(10), inicio); // Formato YYYYMMDD
     request.input('FIM', sql.VarChar(10), fim);     // Formato YYYYMMDD
+    request.input('DEV_ANT', sql.Int, 0); // NOVO PARÂMETRO: @DEV_ANT com valor fixo 0
 
     const result = await request.execute('sp_returnFcsAnaliseParticipacoAcerto');
     
