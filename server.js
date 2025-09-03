@@ -59,9 +59,93 @@ async function getPool() {
 
 // ---- QUERIES (as suas, sem alterações) ----
 const queries = {
-    lancamentos_diarios: `SELECT cad_emp.EMP_NMR, 'Lançamento' AS Tipo, COUNT(DISTINCT cad_ped.REV_COD) as [QTDE REV], COUNT(cad_ipe.IPE_COD) AS Qtde, COUNT(DISTINCT cad_ipe.PED_COD) as [QTDE PEDIDOS], SUM(cad_ipe.IPE_VTL) AS Valor, SUM(cad_ipe.IPE_VLC) AS Custo FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and CONVERT(varchar,cad_ipe.IPE_DTL,112) = CONVERT(varchar,GETDATE(),112) and cad_ped.PED_TIP = 11 GROUP BY cad_emp.EMP_NMR ORDER BY Valor DESC`,
+    lancamentos_diarios: `WITH CTE_Dados AS (
+    -- Seleção de dados relevantes com as condições do WHERE aplicadas
+    SELECT 
+        cad_emp.EMP_NMR,
+        cad_ipe.IPE_COD,
+        cad_ipe.PED_COD,
+        cad_ipe.IPE_VTL,
+        cad_ipe.IPE_VLC,
+        cad_ipe.IPE_PPM,
+        cad_ipe.IPE_CDI, 
+        cad_rev.REV_COD
+    FROM cad_ipe
+    JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod -- Relação com pedidos
+    JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod -- Relação com empresas
+    LEFT JOIN cad_rev ON cad_rev.REV_COD = cad_ped.REV_COD -- Relação opcional com revisões
+    WHERE 
+        cad_ped.PED_STA IN ('CON', 'ACE', 'DEV', 'PND', 'ESP', 'SPC') -- Status permitidos
+        AND CONVERT(varchar, cad_ipe.IPE_DTL, 112) = CONVERT(varchar, GETDATE(), 112) -- Data do dia atual
+        AND cad_ped.PED_TIP = 11 -- Apenas tipo de pedido 11
+)
+SELECT 
+    dados.EMP_NMR,
+    'Lançamento' AS Tipo,
+
+    -- Métricas para quando IPE_CDI é NULL
+    COUNT(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_COD ELSE NULL END) AS Qtde,
+    SUM(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_VTL ELSE 0 END) AS Valor,
+    SUM(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_VLC ELSE 0 END) AS Custo,
+
+    -- Métricas para quando IPE_CDI é NOT NULL
+    COUNT(CASE WHEN dados.IPE_CDI IS NOT NULL THEN dados.IPE_COD ELSE NULL END) AS Remarcacao, -- Contagem de itens com CDI
+    SUM(CASE WHEN dados.IPE_CDI IS NOT NULL THEN dados.IPE_VTL ELSE 0 END) AS Valor_Remarcacao,
+    SUM(CASE WHEN dados.IPE_CDI IS NOT NULL THEN dados.IPE_VLC ELSE 0 END) AS Custo_Remarcacao,
+
+    -- Quantidade de revisões (sem distinção de IPE_CDI)
+    COUNT(DISTINCT dados.REV_COD) AS [QTDE REV]
+FROM 
+    CTE_Dados dados
+GROUP BY 
+    dados.EMP_NMR
+ORDER BY 
+    Valor DESC;`,
     devolucoes_diarias: `SELECT cad_emp.EMP_NMR, 'Devolução' AS Tipo, COUNT(DISTINCT cad_ped.REV_COD) as [QTDE REV], COUNT(cad_ipe.IPE_COD) AS Qtde, COUNT(DISTINCT cad_ipe.PED_COD) as [QTDE PEDIDOS], SUM(cad_ipe.IPE_VTL) AS Valor, SUM(cad_ipe.IPE_VLC) AS Custo FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and CONVERT(varchar,cad_ipe.IPE_DDV,112) = CONVERT(varchar,GETDATE(),112) and cad_ped.PED_TIP = 11 GROUP BY cad_emp.EMP_NMR ORDER BY Valor DESC`,
-    lancamentos_acumulados: `SELECT cad_emp.EMP_NMR, 'Lançamento' AS Tipo, COUNT(DISTINCT cad_ped.REV_COD) as [QTDE REV], COUNT(cad_ipe.IPE_COD) AS Qtde, COUNT(DISTINCT cad_ipe.PED_COD) as [QTDE PEDIDOS], SUM(cad_ipe.IPE_VTL) AS Valor, SUM(cad_ipe.IPE_VLC) AS Custo FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and CONVERT(varchar,cad_ipe.IPE_DTL,112) >= CONVERT(varchar,DATEADD(DAY, 1, EOMONTH(GETDATE(), -1)),112) AND CONVERT(varchar,cad_ipe.IPE_DTL,112) <= CONVERT(varchar,GETDATE(),112) and cad_ped.PED_TIP = 11 GROUP BY cad_emp.EMP_NMR ORDER BY Valor DESC`,
+    lancamentos_acumulados: `WITH CTE_Dados AS (
+    -- Seleciona todos os dados relevantes com base no WHERE fornecido
+    SELECT 
+        cad_emp.EMP_NMR,
+        cad_ipe.IPE_COD,
+        cad_ipe.PED_COD,
+        cad_ipe.IPE_VTL,
+        cad_ipe.IPE_VLC,
+        cad_ipe.IPE_PPM,
+        cad_ipe.IPE_CDI, 
+        cad_ipe.IPE_DTL,
+        cad_rev.REV_COD
+    FROM cad_ipe
+    JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod -- Junção com pedidos
+    JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod -- Junção com empresas
+    LEFT JOIN cad_rev ON cad_rev.REV_COD = cad_ped.REV_COD -- Junção opcional com revisões
+    WHERE 
+        cad_ped.PED_STA IN ('CON', 'ACE', 'DEV', 'PND', 'ESP', 'SPC') -- Status permitidos
+        AND cad_ipe.IPE_DTL >= DATEADD(DAY, 1, EOMONTH(GETDATE(), -1)) -- Data de início (1º dia do mês atual)
+        AND cad_ipe.IPE_DTL <= EOMONTH(GETDATE()) -- Último dia do mês atual
+        AND cad_ped.PED_TIP = 11 -- Apenas tipo de pedido 11
+)
+SELECT 
+    dados.EMP_NMR,
+    'Lançamento' AS Tipo,
+
+    -- Quando IPE_CDI IS NULL
+    COUNT(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_COD ELSE NULL END) AS Qtde,
+    SUM(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_VTL ELSE 0 END) AS Valor,
+    SUM(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_VLC ELSE 0 END) AS Custo,
+
+    -- Quando IPE_CDI IS NOT NULL
+    SUM(CASE WHEN dados.IPE_CDI IS NOT NULL THEN 1 ELSE 0 END) AS Remarcacao, -- Contagem de itens com CDI
+    SUM(CASE WHEN dados.IPE_CDI IS NOT NULL THEN dados.IPE_VTL ELSE 0 END) AS Valor_Remarcacao,
+    SUM(CASE WHEN dados.IPE_CDI IS NOT NULL THEN dados.IPE_VLC ELSE 0 END) AS Custo_Remarcacao,
+
+    -- Quantidade de revisões (independe de IPE_CDI)
+    COUNT(DISTINCT dados.REV_COD) AS [QTDE REV]
+FROM 
+    CTE_Dados dados
+GROUP BY 
+    dados.EMP_NMR
+ORDER BY 
+    Valor DESC;`,
     devolucoes_acumuladas: `SELECT cad_emp.EMP_NMR, 'Devolução' AS Tipo, COUNT(DISTINCT cad_ped.REV_COD) as [QTDE REV], COUNT(cad_ipe.IPE_COD) AS Qtde, COUNT(DISTINCT cad_ipe.PED_COD) as [QTDE PEDIDOS], SUM(cad_ipe.IPE_VTL) AS Valor, SUM(cad_ipe.IPE_VLC) AS Custo FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and CONVERT(varchar,cad_ipe.IPE_DDV,112) >= CONVERT(varchar,DATEADD(DAY, 1, EOMONTH(GETDATE(), -1)),112) AND CONVERT(varchar,cad_ipe.IPE_DDV,112) <= CONVERT(varchar,GETDATE(),112) and cad_ped.PED_TIP = 11 GROUP BY cad_emp.EMP_NMR ORDER BY Valor DESC`,
     lancamentos_historico: `SELECT CONVERT(varchar,cad_ipe.IPE_DTL,112) as data_ref, cad_emp.EMP_NMR, SUM(cad_ipe.IPE_VTL) as valor FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and cad_ipe.IPE_DTL >= DATEADD(day, -30, GETDATE()) and cad_ipe.IPE_DTL <= GETDATE() and cad_ped.PED_TIP = 11 GROUP BY CONVERT(varchar,cad_ipe.IPE_DTL,112), cad_emp.EMP_NMR`,
     devolucoes_historico: `SELECT CONVERT(varchar,cad_ipe.IPE_DDV,112) as data_ref, cad_emp.EMP_NMR, SUM(cad_ipe.IPE_VTL) as valor FROM cad_ipe JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod WHERE cad_ped.PED_STA IN('CON','ACE','DEV','PND','ESP','SPC') and cad_ipe.IPE_DDV >= DATEADD(day, -30, GETDATE()) and cad_ipe.IPE_DDV <= GETDATE() and cad_ped.PED_TIP = 11 GROUP BY CONVERT(varchar,cad_ipe.IPE_DDV,112), cad_emp.EMP_NMR`
