@@ -69,7 +69,8 @@ const queries = {
         cad_ipe.IPE_VLC,
         cad_ipe.IPE_PPM,
         cad_ipe.IPE_CDI, 
-        cad_rev.REV_COD
+        cad_rev.REV_COD,
+        cad_ped.PED_COD AS PEDIDO_ID -- Adicionado para contagem de pedidos
     FROM cad_ipe
     JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod -- Relação com pedidos
     JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod -- Relação com empresas
@@ -87,6 +88,9 @@ SELECT
     COUNT(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_COD ELSE NULL END) AS Qtde,
     SUM(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_VTL ELSE 0 END) AS Valor,
     SUM(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_VLC ELSE 0 END) AS Custo,
+
+    -- Quantidade de PEDIDOS únicos (sem distinção de IPE_CDI)
+    COUNT(DISTINCT dados.PEDIDO_ID) AS [QTDE PEDIDOS], -- Adicionado a coluna de pedidos
 
     -- Métricas para quando IPE_CDI é NOT NULL
     COUNT(CASE WHEN dados.IPE_CDI IS NOT NULL THEN dados.IPE_COD ELSE NULL END) AS Remarcacao, -- Contagem de itens com CDI
@@ -113,15 +117,16 @@ ORDER BY
         cad_ipe.IPE_PPM,
         cad_ipe.IPE_CDI, 
         cad_ipe.IPE_DTL,
-        cad_rev.REV_COD
+        cad_rev.REV_COD,
+        cad_ped.PED_COD AS PEDIDO_ID -- Adicionado para contagem de pedidos
     FROM cad_ipe
     JOIN cad_ped ON cad_ipe.ped_cod = cad_ped.ped_cod -- Junção com pedidos
     JOIN cad_emp ON cad_ped.emp_cod = cad_emp.emp_cod -- Junção com empresas
     LEFT JOIN cad_rev ON cad_rev.REV_COD = cad_ped.REV_COD -- Junção opcional com revisões
     WHERE 
         cad_ped.PED_STA IN ('CON', 'ACE', 'DEV', 'PND', 'ESP', 'SPC') -- Status permitidos
-        AND cad_ipe.IPE_DTL >= DATEADD(DAY, 1, EOMONTH(GETDATE(), -1)) -- Data de início (1º dia do mês atual)
-        AND cad_ipe.IPE_DTL <= EOMONTH(GETDATE()) -- Último dia do mês atual
+        AND CONVERT(varchar,cad_ipe.IPE_DTL,112) >= CONVERT(varchar,DATEADD(DAY, 1, EOMONTH(GETDATE(), -1)),112) -- Data de início (1º dia do mês atual)
+        AND CONVERT(varchar,cad_ipe.IPE_DTL,112) <= CONVERT(varchar,GETDATE(),112) -- Data final (dia atual)
         AND cad_ped.PED_TIP = 11 -- Apenas tipo de pedido 11
 )
 SELECT 
@@ -132,6 +137,9 @@ SELECT
     COUNT(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_COD ELSE NULL END) AS Qtde,
     SUM(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_VTL ELSE 0 END) AS Valor,
     SUM(CASE WHEN dados.IPE_CDI IS NULL THEN dados.IPE_VLC ELSE 0 END) AS Custo,
+
+    -- Quantidade de PEDIDOS únicos (independe de IPE_CDI)
+    COUNT(DISTINCT dados.PEDIDO_ID) AS [QTDE PEDIDOS], -- Adicionado a coluna de pedidos
 
     -- Quando IPE_CDI IS NOT NULL
     SUM(CASE WHEN dados.IPE_CDI IS NOT NULL THEN 1 ELSE 0 END) AS Remarcacao, -- Contagem de itens com CDI
