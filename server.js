@@ -393,7 +393,7 @@ app.post('/api/sp-analise-varejo', async (req, res) => {
                 cad_emp.EMP_NMR,
                 cad_ped.PED_COD,
                 cad_ped.PED_STA,
-                cad_ped.PED_DTP,
+                cad_ped.PED_DTA,
                 CASE 
                     WHEN cad_fun.FUN_NOM IS NOT NULL 
                     THEN CONCAT('Func.:',cad_fun.FUN_NOM) 
@@ -419,8 +419,8 @@ app.post('/api/sp-analise-varejo', async (req, res) => {
                 JOIN cad_mpdv on cad_mpdv.PED_COD = cad_ped.PED_COD
             WHERE PED_TIP = 10 
                 AND cad_ped.PED_STA NOT IN('CNC')
-                AND CONVERT(varchar,cad_ped.PED_DTP,112) >= @inicio
-                AND CONVERT(varchar,cad_ped.PED_DTP,112) <= @fim
+                AND CONVERT(varchar,cad_ped.PED_DTA,112) >= @inicio
+                AND CONVERT(varchar,cad_ped.PED_DTA,112) <= @fim
                 AND cad_ped.FCS_COD IS NULL
         `;
 
