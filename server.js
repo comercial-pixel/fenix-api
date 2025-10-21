@@ -370,6 +370,94 @@ app.post('/api/sp-AnaliseParticipacaoDeProdutos', async (req, res) => {
   }
 });
 
+
+// Endpoint para Análise de Varejo
+app.post('/api/sp-analise-varejo', async (req, res) => {
+    try {
+        const { emp_cod, inicio, fim } = req.body;
+
+        console.log('[sp-analise-varejo] Parâmetros recebidos:', { emp_cod, inicio, fim });
+
+        if (!inicio || !fim) {
+            return res.status(400).json({
+                success: false,
+                error: 'Parâmetros inicio e fim são obrigatórios'
+            });
+        }
+
+        const pool = await sql.connect(dbConfig);
+
+        let query = `
+            SELECT
+                cad_emp.EMP_COD, 
+                cad_emp.EMP_NMR,
+                cad_ped.PED_COD,
+                cad_ped.PED_STA,
+                cad_ped.PED_DTP,
+                CASE 
+                    WHEN cad_fun.FUN_NOM IS NOT NULL 
+                    THEN CONCAT('Func.:',cad_fun.FUN_NOM) 
+                    ELSE cad_Ped.CLI_FAN 
+                END as [CLIENTE],
+                cad_ped.PED_VLT,
+                cad_ped.PED_VDE,
+                cad_ped.PED_PDE,
+                cad_ped.PED_VLQ,
+                f.FUN_NOM as [VENDEDOR],
+                CASE 
+                    WHEN cad_ped.FUN_CDC IS NOT NULL 
+                    THEN CONVERT(bit,1) 
+                    ELSE CONVERT(bit,0) 
+                END as [PED_FUNC],
+                cad_ped.PED_REV,
+                cad_mpdv.TPP_DES,
+                cad_mpdv.MPDV_VAL
+            FROM cad_ped 
+                JOIN cad_emp on cad_emp.EMP_COD = cad_ped.EMP_COD
+                LEFT JOIN cad_fun on cad_fun.FUN_COD = cad_ped.FUN_CDC
+                JOIN cad_fun f on f.FUN_COD = cad_ped.FUN_COD
+                JOIN cad_mpdv on cad_mpdv.PED_COD = cad_ped.PED_COD
+            WHERE PED_TIP = 10 
+                AND cad_ped.PED_STA NOT IN('CNC')
+                AND CONVERT(varchar,cad_ped.PED_DTP,112) >= @inicio
+                AND CONVERT(varchar,cad_ped.PED_DTP,112) <= @fim
+                AND cad_ped.FCS_COD IS NULL
+        `;
+
+        // Se emp_cod foi fornecido e não é 0 (todas as unidades)
+        if (emp_cod && emp_cod !== 0) {
+            query += ` AND cad_ped.EMP_COD = @emp_cod`;
+        }
+
+        query += ` ORDER BY cad_emp.EMP_NMR, cad_ped.PED_ID DESC`;
+
+        const request = pool.request();
+        request.input('inicio', sql.VarChar, inicio);
+        request.input('fim', sql.VarChar, fim);
+        
+        if (emp_cod && emp_cod !== 0) {
+            request.input('emp_cod', sql.Int, emp_cod);
+        }
+
+        const result = await request.query(query);
+
+        console.log(`[sp-analise-varejo] Consulta executada com sucesso. Registros encontrados: ${result.recordset.length}`);
+
+        res.json({
+            success: true,
+            data: result.recordset
+        });
+
+    } catch (error) {
+        console.error('[sp-analise-varejo] Erro:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+
 //
 //
 // Status do DB: hora do SQL + contagens/valores do dia (para acompanhar atualização)
