@@ -504,7 +504,8 @@ app.post('/api/sp-analise-itens-pedido-black-friday', async (req, res) => {
                 cad_cup.CUP_DES,
                 cad_tct.TCT_DES,
                 cad_tdp.TDP_DES,
-                cad_ipe.PRO_VAL
+                cad_ipe.PRO_VAL,
+                cad_ipe.IPE_COD
             FROM cad_ped 
             JOIN cad_emp on cad_emp.EMP_COD = cad_ped.EMP_COD
             LEFT JOIN cad_fun on cad_fun.FUN_COD = cad_ped.FUN_CDC
