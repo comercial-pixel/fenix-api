@@ -555,6 +555,35 @@ app.post('/api/sp-analise-itens-pedido-black-friday', async (req, res) => {
 
 
 
+// Endpoint para Análise Geral (sp_returnFcsAnaliseAcertoFechamento)
+app.post('/api/sp-analise-acerto-fechamento', async (req, res) => {
+  try {
+    const { emp_cod, inicio, fim } = req.body;
+
+    if (!emp_cod || !inicio || !fim) {
+      return res.status(400).json({ success: false, error: 'Parâmetros emp_cod, inicio e fim são obrigatórios.' });
+    }
+
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('EMP_COD', sql.Int, emp_cod)
+      .input('INICIO', sql.VarChar, inicio) // Formato esperado YYYYMMDD
+      .input('FIM', sql.VarChar, fim)       // Formato esperado YYYYMMDD
+      .execute('sp_returnFcsAnaliseAcertoFechamento');
+
+    res.json({
+      success: true,
+      data: result.recordset
+    });
+
+  } catch (err) {
+    console.error('Erro ao executar sp_returnFcsAnaliseAcertoFechamento:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+
 
 //
 //
