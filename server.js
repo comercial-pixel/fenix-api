@@ -217,6 +217,9 @@ app.post('/api/sp-rev-comissao', async (req, res) => {
     }
 });
 
+
+
+
 // NOVO ENDPOINT: para a Stored Procedure sp_CobrancaAcerto
 app.post('/api/sp-cobranca-acerto', async (req, res) => {
   try {
@@ -564,7 +567,13 @@ app.post('/api/sp-analise-acerto-fechamento', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Parâmetros emp_cod, inicio e fim são obrigatórios.' });
     }
 
-    const pool = await poolPromise;
+    // CORREÇÃO AQUI: Usar getPool() em vez de poolPromise
+    const pool = await getPool();
+    
+    if (!pool) {
+        return res.status(500).json({ success: false, error: 'Não foi possível conectar ao banco de dados.' });
+    }
+
     const result = await pool.request()
       .input('EMP_COD', sql.Int, emp_cod)
       .input('INICIO', sql.VarChar, inicio) // Formato esperado YYYYMMDD
